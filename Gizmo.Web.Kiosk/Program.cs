@@ -1,7 +1,6 @@
 using Gizmo.UI;
 using Gizmo.Web.Api.Clients.Builder;
 using Gizmo.Web.Kiosk.Configuration;
-using Gizmo.Web.Kiosk.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -13,8 +12,6 @@ builder.RootComponents.Add<Gizmo.Web.Kiosk.App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.Configure<KioskOptions>(builder.Configuration.GetSection("Kiosk"));
-
-builder.Services.AddTransient<ApiKeyMessageHandler>();
 
 static void httpClientConfig(IServiceProvider sp, HttpClient client)
 {
@@ -28,8 +25,7 @@ static void httpClientConfig(IServiceProvider sp, HttpClient client)
 }
 
 builder.Services.AddSecureWebApiClients("GizmoKiosk", httpClientConfig)
-    .WithMessagePackSerialization()
-    .WithMessageHandler<ApiKeyMessageHandler>();
+    .WithMessagePackSerialization();
 
 builder.Services.AddUnsecureWebApiClients("GizmoKioskUnsecured", httpClientConfig)
     .WithMessagePackSerialization();
