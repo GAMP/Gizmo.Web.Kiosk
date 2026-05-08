@@ -7,8 +7,10 @@ using Gizmo.UI.View.Services;
 using Gizmo.Web.Api.Clients;
 using Gizmo.Web.Api.Models;
 using Gizmo.Web.Kiosk.Configuration;
+using Gizmo.Web.Kiosk.Resources;
 using Gizmo.Web.Kiosk.ViewStates;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,18 +28,21 @@ namespace Gizmo.Web.Kiosk.ViewServices
             HostsWebApiClient hostsClient,
             IHttpClientFactory httpClientFactory,
             IOptions<KioskOptions> options,
-            NavigationManager navigationManager) : base(viewState, logger, serviceProvider)
+            NavigationManager navigationManager,
+            IStringLocalizer<Resources.Resources> localizer) : base(viewState, logger, serviceProvider)
         {
             _hostsClient = hostsClient;
             _httpClientFactory = httpClientFactory;
             _options = options.Value;
             _navigationManager = navigationManager;
+            _localizer = localizer;
         }
 
         private readonly HostsWebApiClient _hostsClient;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly KioskOptions _options;
         private readonly NavigationManager _navigationManager;
+        private readonly IStringLocalizer<Resources.Resources> _localizer;
         private CancellationTokenSource? _streamCts;
         private readonly Subject<int> _hostChangedSubject = new();
         private IDisposable? _debounceSubscription;
@@ -104,7 +109,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
 
                 if (hosts.Count == 0)
                 {
-                    ViewState.ErrorMessage = "No hosts found. Please check layout configuration.";
+                    ViewState.ErrorMessage = _localizer["ERROR_NO_HOSTS"];
                     return false;
                 }
 
@@ -120,7 +125,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Failed to load host statuses.");
-                ViewState.ErrorMessage = "Could not connect to server. Retrying...";
+                ViewState.ErrorMessage = _localizer["ERROR_CONNECTION"];
                 return false;
             }
             finally
