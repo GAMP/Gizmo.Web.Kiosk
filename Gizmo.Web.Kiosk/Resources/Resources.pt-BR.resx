@@ -4,4 +4,12 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="HOST_STATE_FREE" xml:space="preserve"><value>Livre</value></data>
+  <data name="HOST_STATE_IN_USE" xml:space="preserve"><value>Em uso</value></data>
+  <data name="HOST_STATE_LOCKED" xml:space="preserve"><value>Bloqueado</value></data>
+  <data name="HOST_STATE_OUT_OF_ORDER" xml:space="preserve"><value>Fora de serviço</value></data>
+  <data name="HOST_STATE_MAINTENANCE" xml:space="preserve"><value>Manutenção</value></data>
+  <data name="ERROR_NO_HOSTS" xml:space="preserve"><value>Nenhum host encontrado. Verifique a configuração do layout.</value></data>
+  <data name="ERROR_CONNECTION" xml:space="preserve"><value>Não foi possível conectar ao servidor. Tentando novamente...</value></data>
+  <data name="ERROR_NO_HOSTS_FOUND" xml:space="preserve"><value>Nenhum host encontrado.</value></data>
 </root>

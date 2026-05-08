@@ -39,7 +39,7 @@ builder.Services.AddSecureWebApiClients("GizmoKiosk", httpClientConfig)
 builder.Services.AddUnsecureWebApiClients("GizmoKioskUnsecured", httpClientConfig)
     .WithMessagePackSerialization();
 
-builder.Services.AddLocalization(opt => opt.ResourcesPath = "Resources");
+builder.Services.AddLocalization();
 
 var assembly = Assembly.GetExecutingAssembly();
 builder.Services.AddUIServices();

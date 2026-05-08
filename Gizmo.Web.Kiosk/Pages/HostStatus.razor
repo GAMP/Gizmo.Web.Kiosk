@@ -21,7 +21,7 @@
     }
     else if (!ViewState.Hosts.Any())
     {
-        <div class="status-message">@L[Resources.ERROR_NO_HOSTS_FOUND]</div>
+        <div class="status-message">@L[nameof(Gizmo.Web.Kiosk.Resources.Resources.ERROR_NO_HOSTS_FOUND)]</div>
     }
     else
     {
@@ -51,3 +51,24 @@
         </div>
     }
 </div>
+
+@code {
+    private RenderFragment RenderCard(Gizmo.Web.Api.Models.HostStatusModel host, int size) => __builder =>
+    {
+        var small = size < 60;
+        <div class="host-cell__number" style="font-size:@(size * 0.28)px">@host.Number</div>
+        @if (!small)
+        {
+            <div class="host-cell__name">@host.Name</div>
+        }
+        @if (host.Sessions.Any())
+        {
+            var session = host.Sessions.First();
+            <div class="host-cell__time">@FormatTime(session.CreditedTime)</div>
+        }
+        else if (!small)
+        {
+            <div class="host-cell__state">@GetStatusLabel(host)</div>
+        }
+    };
+}

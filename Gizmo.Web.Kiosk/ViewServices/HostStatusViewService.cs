@@ -29,7 +29,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
             IHttpClientFactory httpClientFactory,
             IOptions<KioskOptions> options,
             NavigationManager navigationManager,
-            IStringLocalizer<Resources.Resources> localizer) : base(viewState, logger, serviceProvider)
+            IStringLocalizer<Gizmo.Web.Kiosk.Resources.Resources> localizer) : base(viewState, logger, serviceProvider)
         {
             _hostsClient = hostsClient;
             _httpClientFactory = httpClientFactory;
@@ -42,7 +42,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly KioskOptions _options;
         private readonly NavigationManager _navigationManager;
-        private readonly IStringLocalizer<Resources.Resources> _localizer;
+        private readonly IStringLocalizer<Gizmo.Web.Kiosk.Resources.Resources> _localizer;
         private CancellationTokenSource? _streamCts;
         private readonly Subject<int> _hostChangedSubject = new();
         private IDisposable? _debounceSubscription;
@@ -109,7 +109,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
 
                 if (hosts.Count == 0)
                 {
-                    ViewState.ErrorMessage = _localizer[Resources.Resources.ERROR_NO_HOSTS];
+                    ViewState.ErrorMessage = _localizer[nameof(Gizmo.Web.Kiosk.Resources.Resources.ERROR_NO_HOSTS)];
                     return false;
                 }
 
@@ -125,7 +125,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Failed to load host statuses.");
-                ViewState.ErrorMessage = _localizer[Resources.Resources.ERROR_CONNECTION];
+                ViewState.ErrorMessage = _localizer[nameof(Gizmo.Web.Kiosk.Resources.Resources.ERROR_CONNECTION)];
                 return false;
             }
             finally

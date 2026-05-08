@@ -1,5 +1,4 @@
 using Gizmo.Web.Api.Models;
-using Gizmo.Web.Kiosk.Resources;
 using Gizmo.Web.Kiosk.ViewStates;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
@@ -11,7 +10,7 @@ namespace Gizmo.Web.Kiosk.Pages
     {
         [Inject] protected HostStatusViewState ViewState { get; set; } = null!;
         [Inject] protected IJSRuntime JS { get; set; } = null!;
-        [Inject] protected IStringLocalizer<Resources.Resources> L { get; set; } = null!;
+        [Inject] protected IStringLocalizer<Gizmo.Web.Kiosk.Resources.Resources> L { get; set; } = null!;
 
         protected const int GapPx = 6;
         protected const int MinCellPx = 60;
@@ -59,36 +58,17 @@ namespace Gizmo.Web.Kiosk.Pages
             }
         }
 
-        private void BuildCellMap()
+        protected void BuildCellMap()
         {
             HostsByCell = ViewState.Hosts
                 .ToDictionary(h => (h.Row, h.Column));
         }
 
-        private void OnViewStateChanged(object? sender, EventArgs e)
+        protected void OnViewStateChanged(object? sender, EventArgs e)
         {
             BuildCellMap();
             InvokeAsync(StateHasChanged);
         }
-
-        protected RenderFragment RenderCard(HostStatusModel host, int size) => __builder =>
-        {
-            var small = size < 60;
-            <div class="host-cell__number" style="font-size:@(size * 0.28)px">@host.Number</div>
-            @if (!small)
-            {
-                <div class="host-cell__name">@host.Name</div>
-            }
-            @if (host.Sessions.Any())
-            {
-                var session = host.Sessions.First();
-                <div class="host-cell__time">@FormatTime(session.CreditedTime)</div>
-            }
-            else if (!small)
-            {
-                <div class="host-cell__state">@GetStatusLabel(host)</div>
-            }
-        };
 
         protected static string GetCellClass(HostStatusModel host)
         {
@@ -102,10 +82,10 @@ namespace Gizmo.Web.Kiosk.Pages
 
         protected string GetStatusLabel(HostStatusModel host)
         {
-            if (host.IsOutOfOrder)    return L[Resources.Resources.HOST_STATE_OUT_OF_ORDER];
-            if (host.IsInMaintenance) return L[Resources.Resources.HOST_STATE_MAINTENANCE];
-            if (host.IsLocked)        return L[Resources.Resources.HOST_STATE_LOCKED];
-            return L[Resources.Resources.HOST_STATE_FREE];
+            if (host.IsOutOfOrder)    return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.HOST_STATE_OUT_OF_ORDER)];
+            if (host.IsInMaintenance) return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.HOST_STATE_MAINTENANCE)];
+            if (host.IsLocked)        return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.HOST_STATE_LOCKED)];
+            return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.HOST_STATE_FREE)];
         }
 
         protected static string FormatTime(double? seconds)

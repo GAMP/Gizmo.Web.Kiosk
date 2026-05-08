@@ -4,4 +4,12 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="HOST_STATE_FREE" xml:space="preserve"><value>Свободно</value></data>
+  <data name="HOST_STATE_IN_USE" xml:space="preserve"><value>Занято</value></data>
+  <data name="HOST_STATE_LOCKED" xml:space="preserve"><value>Заблокировано</value></data>
+  <data name="HOST_STATE_OUT_OF_ORDER" xml:space="preserve"><value>Не работает</value></data>
+  <data name="HOST_STATE_MAINTENANCE" xml:space="preserve"><value>Техническое обслуживание</value></data>
+  <data name="ERROR_NO_HOSTS" xml:space="preserve"><value>Хосты не найдены. Проверьте конфигурацию макета.</value></data>
+  <data name="ERROR_CONNECTION" xml:space="preserve"><value>Не удалось подключиться к серверу. Повторная попытка...</value></data>
+  <data name="ERROR_NO_HOSTS_FOUND" xml:space="preserve"><value>Хосты не найдены.</value></data>
 </root>
