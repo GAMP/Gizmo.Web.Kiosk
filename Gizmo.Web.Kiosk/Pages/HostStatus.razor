@@ -1,0 +1,171 @@
+@page "/hoststatus"
+@using Gizmo.Web.Kiosk.Services
+@inject HostStatusService HostStatusSvc
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="dashboard">
+    @if (_loading)
+    {
+        <div class="status-message">Loading...</div>
+    }
+    else if (HostStatusSvc.ErrorMessage is not null)
+    {
+        <div class="status-message error">@HostStatusSvc.ErrorMessage</div>
+    }
+    else if (!HostStatusSvc.Hosts.Any())
+    {
+        <div class="status-message">No hosts found.</div>
+    }
+    else if (HasLayout)
+    {
+        var cellSize = CellSize;
+
+        <div class="hosts-map" style="width:100%; height:100%;">
+            @for (int r = 0; r < GridRows; r++)
+            {
+                @for (int c = 0; c < GridCols; c++)
+                {
+                    var row = r; var col = c;
+                    if (!_hostsByCell.TryGetValue((row, col), out var cellHost))
+                    {
+                        <div class="host-cell host-cell--placeholder"
+                             style="@CellStyle(row, col, cellSize)" />
+                    }
+                    else
+                    {
+                        <div class="host-cell @GetCellClass(cellHost)"
+                             style="@CellStyle(row, col, cellSize)"
+                             title="@cellHost.Name">
+                            @RenderCard(cellHost, cellSize)
+                        </div>
+                    }
+                }
+            }
+        </div>
+    }
+    else
+    {
+        <div class="hosts-grid">
+            @foreach (var host in HostStatusSvc.Hosts.Values.OrderBy(h => h.Number))
+            {
+                <div class="host-cell @GetCellClass(host)" title="@host.Name">
+                    @RenderCard(host, 82)
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int GapPx = 6;
+    private const int MinCellPx = 60;
+    private const int MaxCellPx = 72;
+
+    private bool _loading = true;
+    private int _vpWidth = 1280;
+    private int _vpHeight = 800;
+    private CancellationTokenSource _cts = new();
+    private Dictionary<(int, int), HostEntry> _hostsByCell = [];
+
+    private bool HasLayout => HostStatusSvc.Hosts.Values.Any(h => h.Row.HasValue);
+    private int MaxRow => HostStatusSvc.Hosts.Values.Max(h => h.Row ?? 0);
+    private int MaxCol => HostStatusSvc.Hosts.Values.Max(h => h.Column ?? 0);
+    private int GridCols => Math.Max(MaxCol + 1, (_vpWidth - GapPx) / Math.Max(CellSize + GapPx, 1));
+    private int GridRows => Math.Max(MaxRow + 1, (_vpHeight - GapPx) / Math.Max(CellSize + GapPx, 1));
+
+    private int CellSize
+    {
+        get
+        {
+            if (!HasLayout) return 82;
+            var byWidth  = (_vpWidth  - GapPx) / (MaxCol + 1) - GapPx;
+            var byHeight = (_vpHeight - GapPx) / (MaxRow + 1) - GapPx;
+            return Math.Clamp(Math.Min(byWidth, byHeight), MinCellPx, MaxCellPx);
+        }
+    }
+
+    private static string CellStyle(int row, int col, int size) =>
+        $"left:{col * (size + GapPx) + GapPx}px; top:{row * (size + GapPx) + GapPx}px; width:{size}px; height:{size}px;";
+
+    protected override async Task OnInitializedAsync()
+    {
+        HostStatusSvc.Changed += OnChanged;
+        await HostStatusSvc.InitializeAsync(_cts.Token);
+        _loading = false;
+        BuildCellMap();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var size = await JS.InvokeAsync<int[]>("eval", "[window.innerWidth, window.innerHeight]");
+            _vpWidth  = size[0];
+            _vpHeight = size[1];
+            StateHasChanged();
+        }
+    }
+
+    private void BuildCellMap()
+    {
+        _hostsByCell = HostStatusSvc.Hosts.Values
+            .Where(h => h.Row.HasValue && h.Column.HasValue)
+            .ToDictionary(h => (h.Row!.Value, h.Column!.Value));
+    }
+
+    private void OnChanged(object? sender, EventArgs e)
+    {
+        BuildCellMap();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private RenderFragment RenderCard(HostEntry host, int size) => __builder =>
+    {
+        var small = size < 60;
+        <div class="host-cell__number" style="font-size:@(size * 0.28)px">@host.Number</div>
+        @if (!small)
+        {
+            <div class="host-cell__name">@host.Name</div>
+        }
+        @if (host.IsOccupied)
+        {
+            <div class="host-cell__time">@FormatTime(host.CreditedTime)</div>
+        }
+        else if (!small)
+        {
+            <div class="host-cell__state">@GetStatusLabel(host)</div>
+        }
+    };
+
+    private static string GetCellClass(HostEntry host)
+    {
+        if (host.IsOutOfOrder) return "host-cell--out-of-order";
+        if (host.IsLocked)     return "host-cell--locked";
+        if (host.IsOccupied)   return "host-cell--occupied";
+        return "host-cell--free";
+    }
+
+    private static string GetStatusLabel(HostEntry host)
+    {
+        if (host.IsOutOfOrder) return "Out of order";
+        if (host.IsLocked)     return "Locked";
+        return "Free";
+    }
+
+    private static string FormatTime(double? seconds)
+    {
+        if (seconds is null) return "∞";
+        var ts = TimeSpan.FromSeconds(seconds.Value);
+        return ts.TotalHours >= 1
+            ? $"{(int)ts.TotalHours}:{ts.Minutes:D2}"
+            : $"{ts.Minutes}:{ts.Seconds:D2}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        HostStatusSvc.Changed -= OnChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+    }
+}

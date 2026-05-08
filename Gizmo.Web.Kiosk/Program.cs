@@ -2,6 +2,7 @@ using Gizmo.UI;
 using Gizmo.Web.Api.Clients.Builder;
 using Gizmo.Web.Kiosk.Configuration;
 using Gizmo.Web.Kiosk.Infrastructure;
+using Gizmo.Web.Kiosk.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,8 @@ builder.Services.AddSecureWebApiClients("GizmoKiosk", (sp, client) =>
 })
 .WithMessagePackSerialization()
 .WithMessageHandler<ApiKeyMessageHandler>();
+
+builder.Services.AddSingleton<HostStatusService>();
 
 var assembly = Assembly.GetExecutingAssembly();
 builder.Services.AddViewStates(assembly);
