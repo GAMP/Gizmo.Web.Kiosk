@@ -134,10 +134,12 @@
 
     private static string GetCellClass(Gizmo.Web.Api.Models.HostStatusModel host)
     {
-        if (host.IsOutOfOrder || host.IsInMaintenance) return "host-cell--out-of-order";
-        if (host.IsLocked)     return "host-cell--locked";
-        if (host.Sessions.Any()) return "host-cell--occupied";
-        return "host-cell--free";
+        var state = host.IsOutOfOrder || host.IsInMaintenance ? "host-cell--out-of-order"
+                  : host.IsLocked                            ? "host-cell--locked"
+                  : host.Sessions.Any()                      ? "host-cell--occupied"
+                  :                                            "host-cell--free";
+
+        return host.IsConnected ? state : $"{state} host-cell--offline";
     }
 
     private static string GetStatusLabel(Gizmo.Web.Api.Models.HostStatusModel host)
