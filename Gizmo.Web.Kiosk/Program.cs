@@ -1,5 +1,6 @@
 using Gizmo.UI;
 using Gizmo.Web.Api.Clients.Builder;
+using Microsoft.AspNetCore.Components;
 using Gizmo.Web.Kiosk.Configuration;
 using Gizmo.Web.Kiosk.Infrastructure;
 using Microsoft.AspNetCore.Components.Web;
@@ -18,9 +19,14 @@ builder.Services.AddTransient<ApiKeyMessageHandler>();
 builder.Services.AddSecureWebApiClients("GizmoKiosk", (sp, client) =>
 {
     var options = sp.GetRequiredService<IOptions<KioskOptions>>().Value;
-    var url = options.ServerUrl.TrimEnd('/') + "/";
-    if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+
+    var baseUrl = string.IsNullOrWhiteSpace(options.ServerUrl)
+        ? sp.GetRequiredService<NavigationManager>().BaseUri
+        : options.ServerUrl.TrimEnd('/') + "/";
+
+    if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri))
         throw new InvalidOperationException($"Kiosk:ServerUrl is not a valid absolute URI: '{options.ServerUrl}'");
+
     client.BaseAddress = uri;
 })
 .WithMessagePackSerialization()
