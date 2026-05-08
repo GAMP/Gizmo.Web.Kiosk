@@ -165,9 +165,30 @@ namespace Gizmo.Web.Kiosk.ViewServices
                 var idx = hosts.FindIndex(h => h.HostId == hostId);
 
                 if (idx >= 0)
-                    hosts[idx] = updated;
+                {
+                    // Preserve layout position from the existing entry — GetStatusByIdAsync
+                    // has no layout context so it returns Row=0, Column=0.
+                    var existing = hosts[idx];
+                    hosts[idx] = new HostStatusModel
+                    {
+                        HostId = updated.HostId,
+                        Number = updated.Number,
+                        Name = updated.Name,
+                        HostGroupId = updated.HostGroupId,
+                        HostGroupName = updated.HostGroupName,
+                        Row = existing.Row,
+                        Column = existing.Column,
+                        IsLocked = updated.IsLocked,
+                        IsOutOfOrder = updated.IsOutOfOrder,
+                        IsInMaintenance = updated.IsInMaintenance,
+                        IsConnected = updated.IsConnected,
+                        Sessions = updated.Sessions,
+                    };
+                }
                 else
+                {
                     hosts.Add(updated);
+                }
 
                 ViewState.Hosts = hosts;
                 RaiseViewStateChanged();
