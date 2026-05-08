@@ -1,11 +1,6 @@
 @page "/"
 @page "/hoststatus"
-@using Gizmo.Web.Kiosk.ViewStates
-@inject HostStatusViewState ViewState
-@inject IJSRuntime JS
-@using Gizmo.Web.Kiosk.Resources
-@inject IStringLocalizer<Resources> L
-@implements IDisposable
+@inherits HostStatusBase
 
 <div class="dashboard">
     @if (ViewState.IsInitializing == true || ViewState.IsInitialized == null)
@@ -37,7 +32,7 @@
                 @for (int c = 0; c < GridCols; c++)
                 {
                     var row = r; var col = c;
-                    var host = _hostsByCell.GetValueOrDefault((row, col));
+                    var host = HostsByCell.GetValueOrDefault((row, col));
                     if (host is null)
                     {
                         <div class="host-cell host-cell--placeholder"
@@ -56,113 +51,3 @@
         </div>
     }
 </div>
-
-@code {
-    private const int GapPx = 6;
-    private const int MinCellPx = 60;
-    private const int MaxCellPx = 72;
-
-    private int _vpWidth = 1280;
-    private int _vpHeight = 800;
-    private Dictionary<(int, int), Gizmo.Web.Api.Models.HostStatusModel> _hostsByCell = [];
-
-    private int MaxRow => ViewState.MaxRow;
-    private int MaxCol => ViewState.MaxCol;
-    private int GridCols => Math.Max(MaxCol + 1, (_vpWidth - GapPx) / Math.Max(CellSize + GapPx, 1));
-    private int GridRows => Math.Max(MaxRow + 1, (_vpHeight - GapPx) / Math.Max(CellSize + GapPx, 1));
-
-    private int CellSize
-    {
-        get
-        {
-            if (!ViewState.Hosts.Any()) return 82;
-            var byWidth  = (_vpWidth  - GapPx) / (MaxCol + 1) - GapPx;
-            var byHeight = (_vpHeight - GapPx) / (MaxRow + 1) - GapPx;
-            return Math.Clamp(Math.Min(byWidth, byHeight), MinCellPx, MaxCellPx);
-        }
-    }
-
-    private static string CellStyle(int row, int col, int size) =>
-        $"left:{col * (size + GapPx) + GapPx}px; top:{row * (size + GapPx) + GapPx}px; width:{size}px; height:{size}px;";
-
-    protected override Task OnInitializedAsync()
-    {
-        ViewState.OnChange += OnViewStateChanged;
-        BuildCellMap();
-        return Task.CompletedTask;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            var size = await JS.InvokeAsync<int[]>("eval", "[window.innerWidth, window.innerHeight]");
-            _vpWidth  = size[0];
-            _vpHeight = size[1];
-            StateHasChanged();
-        }
-    }
-
-    private void BuildCellMap()
-    {
-        _hostsByCell = ViewState.Hosts
-            .ToDictionary(h => (h.Row, h.Column));
-    }
-
-    private void OnViewStateChanged(object? sender, EventArgs e)
-    {
-        BuildCellMap();
-        InvokeAsync(StateHasChanged);
-    }
-
-    private RenderFragment RenderCard(Gizmo.Web.Api.Models.HostStatusModel host, int size) => __builder =>
-    {
-        var small = size < 60;
-        <div class="host-cell__number" style="font-size:@(size * 0.28)px">@host.Number</div>
-        @if (!small)
-        {
-            <div class="host-cell__name">@host.Name</div>
-        }
-        @if (host.Sessions.Any())
-        {
-            var session = host.Sessions.First();
-            <div class="host-cell__time">@FormatTime(session.CreditedTime)</div>
-        }
-        else if (!small)
-        {
-            <div class="host-cell__state">@GetStatusLabel(host)</div>
-        }
-    };
-
-    private static string GetCellClass(Gizmo.Web.Api.Models.HostStatusModel host)
-    {
-        var state = host.IsOutOfOrder || host.IsInMaintenance ? "host-cell--out-of-order"
-                  : host.IsLocked                            ? "host-cell--locked"
-                  : host.Sessions.Any()                      ? "host-cell--occupied"
-                  :                                            "host-cell--free";
-
-        return host.IsConnected ? state : $"{state} host-cell--offline";
-    }
-
-    private string GetStatusLabel(Gizmo.Web.Api.Models.HostStatusModel host)
-    {
-        if (host.IsOutOfOrder) return L[Resources.HOST_STATE_OUT_OF_ORDER];
-        if (host.IsInMaintenance) return L[Resources.HOST_STATE_MAINTENANCE];
-        if (host.IsLocked)     return L[Resources.HOST_STATE_LOCKED];
-        return L[Resources.HOST_STATE_FREE];
-    }
-
-    private static string FormatTime(double? seconds)
-    {
-        if (seconds is null) return "∞";
-        var ts = TimeSpan.FromSeconds(seconds.Value);
-        return ts.TotalHours >= 1
-            ? $"{(int)ts.TotalHours}:{ts.Minutes:D2}"
-            : $"{ts.Minutes}:{ts.Seconds:D2}";
-    }
-
-    public void Dispose()
-    {
-        ViewState.OnChange -= OnViewStateChanged;
-    }
-}
