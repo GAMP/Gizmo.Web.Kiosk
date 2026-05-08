@@ -31,6 +31,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
                     var culture = new CultureInfo(options.DefaultCulture);
                     CultureInfo.DefaultThreadCurrentCulture = culture;
                     CultureInfo.DefaultThreadCurrentUICulture = culture;
+                    Resources.Resources.Culture = culture;
 
                     Logger.LogInformation("Culture set to {culture} from server options.", culture.Name);
                 }
