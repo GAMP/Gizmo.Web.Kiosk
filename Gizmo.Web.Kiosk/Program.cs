@@ -16,6 +16,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.Configure<KioskOptions>(builder.Configuration.GetSection("Kiosk"));
 
 builder.Services.AddTransient<ApiKeyMessageHandler>();
+builder.Services.AddHttpClient();
 
 static void httpClientConfig(IServiceProvider sp, HttpClient client)
 {

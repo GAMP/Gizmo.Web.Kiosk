@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+using System.Text.Json;
 using Gizmo.UI;
 using Gizmo.UI.View.Services;
 using Gizmo.Web.Api.Clients;
@@ -20,18 +22,36 @@ namespace Gizmo.Web.Kiosk.ViewServices
             ILogger<HostStatusViewService> logger,
             IServiceProvider serviceProvider,
             HostsWebApiClient hostsClient,
-            IOptions<KioskOptions> options) : base(viewState, logger, serviceProvider)
+            IHttpClientFactory httpClientFactory,
+            IOptions<KioskOptions> options,
+            NavigationManager navigationManager) : base(viewState, logger, serviceProvider)
         {
             _hostsClient = hostsClient;
+            _httpClientFactory = httpClientFactory;
             _options = options.Value;
+            _navigationManager = navigationManager;
         }
 
         private readonly HostsWebApiClient _hostsClient;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly KioskOptions _options;
+        private readonly NavigationManager _navigationManager;
+        private CancellationTokenSource? _streamCts;
 
         protected override async Task OnNavigatedIn(NavigationParameters navigationParameters, CancellationToken cancellationToken = default)
         {
             await LoadAsync(cancellationToken);
+
+            // Start SSE stream after initial load
+            _streamCts = new CancellationTokenSource();
+            _ = StreamEventsAsync(_streamCts.Token);
+        }
+
+        protected override Task OnNavigatedOut(NavigationParameters navigationParameters, CancellationToken cancellationToken = default)
+        {
+            _streamCts?.Cancel();
+            _streamCts = null;
+            return Task.CompletedTask;
         }
 
         private async Task LoadAsync(CancellationToken cancellationToken)
@@ -67,6 +87,95 @@ namespace Gizmo.Web.Kiosk.ViewServices
                 ViewState.IsInitialized = true;
                 RaiseViewStateChanged();
             }
+        }
+
+        private async Task StreamEventsAsync(CancellationToken cancellationToken)
+        {
+            var baseUrl = string.IsNullOrWhiteSpace(_options.ServerUrl)
+                ? _navigationManager.BaseUri.TrimEnd('/')
+                : _options.ServerUrl.TrimEnd('/');
+
+            var streamUrl = $"{baseUrl}/api/v3/hosts/status/stream";
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    using var client = _httpClientFactory.CreateClient();
+                    using var response = await client.GetAsync(streamUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    response.EnsureSuccessStatusCode();
+
+                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    using var reader = new StreamReader(stream);
+
+                    while (!cancellationToken.IsCancellationRequested && !reader.EndOfStream)
+                    {
+                        var line = await reader.ReadLineAsync(cancellationToken);
+
+                        if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data:"))
+                            continue;
+
+                        var json = line["data:".Length..].Trim();
+
+                        try
+                        {
+                            var notification = JsonSerializer.Deserialize<HostStatusChangedDto>(json,
+                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                            if (notification?.HostId > 0)
+                                await RefreshHostAsync(notification.HostId, cancellationToken);
+                        }
+                        catch (JsonException ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to parse SSE event: {json}", json);
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "SSE stream disconnected, reconnecting in 3s.");
+                    await Task.Delay(3000, cancellationToken);
+                }
+            }
+        }
+
+        private async Task RefreshHostAsync(int hostId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var updated = await _hostsClient.GetStatusByIdAsync(hostId, cancellationToken);
+
+                var hosts = ViewState.Hosts.ToList();
+                var idx = hosts.FindIndex(h => h.HostId == hostId);
+
+                if (idx >= 0)
+                    hosts[idx] = updated;
+                else
+                    hosts.Add(updated);
+
+                ViewState.Hosts = hosts;
+                RaiseViewStateChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to refresh host {HostId}.", hostId);
+            }
+        }
+
+        protected override void OnDisposing(bool isDisposing)
+        {
+            _streamCts?.Cancel();
+            _streamCts = null;
+            base.OnDisposing(isDisposing);
+        }
+
+        private sealed class HostStatusChangedDto
+        {
+            public int HostId { get; init; }
         }
     }
 }
