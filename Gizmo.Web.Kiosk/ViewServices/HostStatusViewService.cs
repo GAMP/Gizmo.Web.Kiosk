@@ -108,10 +108,10 @@ namespace Gizmo.Web.Kiosk.ViewServices
                     using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                     using var reader = new StreamReader(stream);
 
-                    while (!cancellationToken.IsCancellationRequested && !reader.EndOfStream)
+                    string? line;
+                    while (!cancellationToken.IsCancellationRequested &&
+                           (line = await reader.ReadLineAsync(cancellationToken)) is not null)
                     {
-                        var line = await reader.ReadLineAsync(cancellationToken);
-
                         if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data:"))
                             continue;
 
