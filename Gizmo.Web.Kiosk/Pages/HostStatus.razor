@@ -2,7 +2,14 @@
 @page "/hoststatus"
 @inherits HostStatusBase
 
-<div class="dashboard">
+@if (_canInstall)
+{
+    <button class="pwa-install-btn" @onclick="OnInstallClick" @onclick:stopPropagation="true">
+        ↓ Install App
+    </button>
+}
+
+<div class="dashboard" @onclick="OnDashboardClick">
     @if (ViewState.IsInitializing == true || ViewState.IsInitialized == null)
     {
         <div class="skeleton-grid">
@@ -40,11 +47,22 @@
                     }
                     else
                     {
-                        <div class="host-cell @GetCellClass(host)"
+                        var isSelected = ViewState.SelectedHostId == host.HostId;
+                        <div class="host-cell @GetCellClass(host) @(isSelected ? "host-cell--selected" : "")"
                              style="@CellStyle(row, col, cellSize)"
-                             title="@host.Name">
+                             @onclick:stopPropagation="true"
+                             @onclick="() => OnHostClick(host, row, col, cellSize)">
                             @RenderCard(host, cellSize)
                         </div>
+
+                        @if (isSelected)
+                        {
+                            <div class="host-tooltip @GetTooltipPosition(row, col, cellSize)"
+                                 style="@TooltipStyle(row, col, cellSize)"
+                                 @onclick:stopPropagation="true">
+                                @RenderTooltip(host)
+                            </div>
+                        }
                     }
                 }
             }
@@ -53,6 +71,117 @@
 </div>
 
 @code {
+    private void OnHostClick(Gizmo.Web.Api.Models.HostStatusModel host, int row, int col, int size)
+    {
+        ViewState.SelectedHostId = ViewState.SelectedHostId == host.HostId ? null : host.HostId;
+        _tooltipRow = row;
+        _tooltipCol = col;
+        ViewState.RaiseChanged();
+    }
+
+    private void OnDashboardClick()
+    {
+        if (ViewState.SelectedHostId.HasValue)
+        {
+            ViewState.SelectedHostId = null;
+            ViewState.RaiseChanged();
+        }
+    }
+
+    private int _tooltipRow;
+    private int _tooltipCol;
+
+    private const int TooltipWidth = 210;
+    private const int TooltipGap = 8;
+
+    private string TooltipStyle(int row, int col, int size)
+    {
+        var cellLeft = col * (size + GapPx) + GapPx;
+        var cellTop  = row * (size + GapPx) + GapPx;
+        var cellRight = cellLeft + size;
+        var cellBottom = cellTop + size;
+
+        var flipX = cellRight + TooltipGap + TooltipWidth > _vpWidth;
+        var flipY = cellTop + 200 > _vpHeight;
+
+        var x = flipX ? cellLeft - TooltipGap - TooltipWidth : cellRight + TooltipGap;
+        var y = flipY ? cellBottom - 200 : cellTop;
+
+        // Clamp to viewport
+        y = Math.Max(GapPx, Math.Min(y, _vpHeight - 210));
+
+        return $"left:{x}px; top:{y}px;";
+    }
+
+    private string GetTooltipPosition(int row, int col, int size) => string.Empty;
+
+    private RenderFragment RenderTooltip(Gizmo.Web.Api.Models.HostStatusModel host) => __builder =>
+    {
+        <div class="host-tooltip__header">
+            <span class="host-tooltip__number">#@host.Number</span>
+            <span class="host-tooltip__name">@host.Name</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(host.HostGroupName))
+        {
+            <div class="host-tooltip__group">@host.HostGroupName</div>
+        }
+
+        <div class="host-tooltip__flags">
+            <span class="host-tooltip__flag @(host.IsConnected ? "flag--on" : "flag--off")">
+                @(host.IsConnected ? L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_ONLINE)] : L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_OFFLINE)])
+            </span>
+            @if (host.IsLocked)
+            {
+                <span class="host-tooltip__flag flag--warn">@L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_LOCKED)]</span>
+            }
+            @if (host.IsOutOfOrder)
+            {
+                <span class="host-tooltip__flag flag--off">@L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_OUT_OF_ORDER)]</span>
+            }
+            @if (host.IsInMaintenance)
+            {
+                <span class="host-tooltip__flag flag--warn">@L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_MAINTENANCE)]</span>
+            }
+        </div>
+
+        @if (host.Sessions.Any())
+        {
+            <div class="host-tooltip__sessions">
+                @foreach (var session in host.Sessions)
+                {
+                    <div class="host-tooltip__session">
+                        <div class="host-tooltip__session-user">@FormatUsername(session.Username)</div>
+                        <div class="host-tooltip__session-meta">
+                            <span>@FormatSessionState(session.State)</span>
+                            <span>@FormatSpan(session.Span)</span>
+                            @if (session.CreditedTime.HasValue)
+                            {
+                                <span class="time-remaining">@FormatTime(session.CreditedTime) @L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_LEFT)]</span>
+                            }
+                            else
+                            {
+                                <span class="time-remaining">∞</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="host-tooltip__empty">@L[nameof(Gizmo.Web.Kiosk.Resources.Resources.TOOLTIP_NO_SESSIONS)]</div>
+        }
+    };
+
+    private static string FormatSpan(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        return ts.TotalHours >= 1
+            ? $"{(int)ts.TotalHours}h {ts.Minutes}m"
+            : $"{(int)ts.TotalMinutes}m";
+    }
+
     private RenderFragment RenderCard(Gizmo.Web.Api.Models.HostStatusModel host, int size) => __builder =>
     {
         var small = size < 60;

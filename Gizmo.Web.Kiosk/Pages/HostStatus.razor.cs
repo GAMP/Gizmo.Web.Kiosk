@@ -12,12 +12,14 @@ namespace Gizmo.Web.Kiosk.Pages
         [Inject] protected IJSRuntime JS { get; set; } = null!;
         [Inject] protected IStringLocalizer<Gizmo.Web.Kiosk.Resources.Resources> L { get; set; } = null!;
 
+        private DotNetObjectReference<HostStatusBase>? _selfRef;
+
         protected const int GapPx = 6;
         protected const int MinCellPx = 60;
         protected const int MaxCellPx = 72;
 
-        private int _vpWidth = 1280;
-        private int _vpHeight = 800;
+        protected int _vpWidth = 1280;
+        protected int _vpHeight = 800;
 
         protected Dictionary<(int, int), HostStatusModel> HostsByCell { get; private set; } = [];
 
@@ -47,6 +49,8 @@ namespace Gizmo.Web.Kiosk.Pages
             return Task.CompletedTask;
         }
 
+        protected bool _canInstall;
+
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)
@@ -54,8 +58,28 @@ namespace Gizmo.Web.Kiosk.Pages
                 var size = await JS.InvokeAsync<int[]>("eval", "[window.innerWidth, window.innerHeight]");
                 _vpWidth  = size[0];
                 _vpHeight = size[1];
+
+                _selfRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("registerResizeCallback", _selfRef);
+
+                _canInstall = await JS.InvokeAsync<bool>("pwaCanInstall");
                 StateHasChanged();
             }
+        }
+
+        [JSInvokable]
+        public void OnWindowResize(int width, int height)
+        {
+            _vpWidth  = width;
+            _vpHeight = height;
+            InvokeAsync(StateHasChanged);
+        }
+
+        protected async Task OnInstallClick()
+        {
+            await JS.InvokeAsync<bool>("pwaInstall");
+            _canInstall = await JS.InvokeAsync<bool>("pwaCanInstall");
+            StateHasChanged();
         }
 
         protected void BuildCellMap()
@@ -88,18 +112,46 @@ namespace Gizmo.Web.Kiosk.Pages
             return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.HOST_STATE_FREE)];
         }
 
+        protected string FormatUsername(string username)
+        {
+            // Guest usernames are URL-safe base64-encoded GUIDs truncated to 22 chars
+            // (+→-, /→_, no padding). Detect by length and charset.
+            if (username.Length == 22 &&
+                username.All(c => char.IsLetterOrDigit(c) || c == '-' || c == '_'))
+            {
+                return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.USER_GUEST)];
+            }
+            return username;
+        }
+
+        protected string FormatSessionState(Gizmo.Web.Api.Models.UserSessionState state)
+        {
+            if (state.HasFlag(Gizmo.Web.Api.Models.UserSessionState.Paused))
+                return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.SESSION_STATE_PAUSED)];
+            if (state.HasFlag(Gizmo.Web.Api.Models.UserSessionState.Pending))
+                return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.SESSION_STATE_PENDING)];
+            if (state.HasFlag(Gizmo.Web.Api.Models.UserSessionState.Grace))
+                return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.SESSION_STATE_GRACE)];
+            return L[nameof(Gizmo.Web.Kiosk.Resources.Resources.SESSION_STATE_ACTIVE)];
+        }
+
         protected static string FormatTime(double? seconds)
         {
             if (seconds is null) return "∞";
             var ts = TimeSpan.FromSeconds(seconds.Value);
             return ts.TotalHours >= 1
-                ? $"{(int)ts.TotalHours}:{ts.Minutes:D2}"
-                : $"{ts.Minutes}:{ts.Seconds:D2}";
+                ? $"{(int)ts.TotalHours}h {ts.Minutes}m"
+                : $"{(int)ts.TotalMinutes}m";
         }
 
         public void Dispose()
         {
             ViewState.OnChange -= OnViewStateChanged;
+            if (_selfRef is not null)
+            {
+                JS.InvokeVoidAsync("unregisterResizeCallback");
+                _selfRef.Dispose();
+            }
         }
     }
 }

@@ -3,12 +3,19 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gizmo.Web.Kiosk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Gizmo Kiosk</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
+    <link rel="manifest" href="manifest.json" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <meta name="theme-color" content="#0d0f1c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Gizmo Kiosk" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <link href="Gizmo.Web.Kiosk.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
     <style>
@@ -74,7 +81,7 @@
 <body>
     <div id="app">
         <div id="app-loading">
-            <div class="app-loading__logo">Gizmo</div>
+            <div class="app-loading__logo">Gizmo Kiosk</div>
             <div class="app-loading__bar">
                 <div class="app-loading__bar-fill"></div>
             </div>
@@ -93,6 +100,49 @@
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
     <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
+
+        // PWA install prompt
+        window._pwaInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            window._pwaInstallPrompt = e;
+            window.dispatchEvent(new Event('pwaInstallAvailable'));
+        });
+        window.addEventListener('appinstalled', () => {
+            window._pwaInstallPrompt = null;
+            window.dispatchEvent(new Event('pwaInstallDone'));
+        });
+        window.pwaInstall = async () => {
+            if (!window._pwaInstallPrompt) return false;
+            window._pwaInstallPrompt.prompt();
+            const { outcome } = await window._pwaInstallPrompt.userChoice;
+            if (outcome === 'accepted') window._pwaInstallPrompt = null;
+            return outcome === 'accepted';
+        };
+        window.pwaCanInstall = () => !!window._pwaInstallPrompt;
+
+        // Resize observer: notifies Blazor when the window size changes (debounced)
+        window._resizeRef = null;
+        window._resizeTimer = null;
+        window.registerResizeCallback = (dotNetRef) => {
+            window._resizeRef = dotNetRef;
+            window.addEventListener('resize', () => {
+                clearTimeout(window._resizeTimer);
+                window._resizeTimer = setTimeout(() => {
+                    if (window._resizeRef) {
+                        window._resizeRef.invokeMethodAsync('OnWindowResize', window.innerWidth, window.innerHeight);
+                    }
+                }, 250);
+            });
+        };
+        window.unregisterResizeCallback = () => {
+            window._resizeRef = null;
+        };
+
         // Apply persisted culture before Blazor starts so satellite assemblies load correctly
         const culture = localStorage.getItem('kiosk.culture');
         if (culture) {

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Gizmo Kiosk — Offline</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0;
+            background: #0d0f1c;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100%;
+        }
+        .offline {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            gap: 1.5rem;
+        }
+        .offline__icon {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+        .offline__title {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(200, 220, 255, 0.4);
+        }
+        .offline__sub {
+            font-size: 0.75rem;
+            color: rgba(200, 220, 255, 0.2);
+            letter-spacing: 0.08em;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline">
+        <div class="offline__icon">⚡</div>
+        <div class="offline__title">Gizmo Kiosk</div>
+        <div class="offline__sub">Waiting for connection…</div>
+    </div>
+    <script>
+        // Auto-reload when connection is restored
+        window.addEventListener('online', () => location.reload());
+    </script>
+</body>
+</html>

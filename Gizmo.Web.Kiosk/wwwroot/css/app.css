@@ -133,6 +133,115 @@ html, body {
     opacity: 0.2;
 }
 
+/* ── Selected ────────────────────────────────────────── */
+.host-cell--selected {
+    outline: 2px solid rgba(200, 220, 255, 0.8);
+    outline-offset: 2px;
+    z-index: 5;
+}
+
+/* ── Tooltip ─────────────────────────────────────────── */
+.host-tooltip {
+    position: absolute;
+    z-index: 100;
+    width: 210px;
+    background: #131726;
+    border: 1px solid #2a3a60;
+    border-radius: 10px;
+    padding: 0.75rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.host-tooltip__header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.host-tooltip__number {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.host-tooltip__name {
+    font-size: 0.75rem;
+    color: #7090c0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.host-tooltip__group {
+    font-size: 0.65rem;
+    color: #4a6090;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.host-tooltip__flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.host-tooltip__flag {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.flag--on  { color: #4ecb80; background: rgba(42,138,90,0.15); }
+.flag--off { color: #f87171; background: rgba(180,40,40,0.15); }
+.flag--warn { color: #fbbf24; background: rgba(180,130,0,0.15); }
+
+.host-tooltip__sessions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 0.4rem;
+}
+
+.host-tooltip__session {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.host-tooltip__session-user {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #c8dcff;
+}
+
+.host-tooltip__session-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.62rem;
+    color: #5070a0;
+    flex-wrap: wrap;
+}
+
+.host-tooltip__session-meta .time-remaining {
+    color: #7eb8ff;
+}
+
+.host-tooltip__empty {
+    font-size: 0.65rem;
+    color: #3a5080;
+    font-style: italic;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 0.4rem;
+}
+
 /* ── Offline modifier — layered on top of any state ─── */
 .host-cell--offline {
     opacity: 0.45;
@@ -175,6 +284,31 @@ html, body {
     letter-spacing: 0.03em;
     color: #c8dcff;
     font-variant-numeric: tabular-nums;
+}
+
+/* ── PWA install button ──────────────────────────────── */
+.pwa-install-btn {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 200;
+    padding: 0.5rem 1rem;
+    background: #1e2d4a;
+    color: #7eb8ff;
+    border: 1px solid #3a5a90;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: inherit;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.pwa-install-btn:hover {
+    opacity: 1;
+    background: #243560;
 }
 
 /* ── Blazor framework ────────────────────────────────── */
