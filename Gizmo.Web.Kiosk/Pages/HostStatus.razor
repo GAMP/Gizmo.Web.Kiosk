@@ -4,6 +4,7 @@
 @inject HostStatusViewState ViewState
 @inject IJSRuntime JS
 @using Gizmo.Web.Kiosk.Resources
+@inject IStringLocalizer<Resources> L
 @implements IDisposable
 
 <div class="dashboard">
@@ -25,7 +26,7 @@
     }
     else if (!ViewState.Hosts.Any())
     {
-        <div class="status-message">@Resources.ERROR_NO_HOSTS_FOUND</div>
+        <div class="status-message">@L[Resources.ERROR_NO_HOSTS_FOUND]</div>
     }
     else
     {
@@ -145,10 +146,10 @@
 
     private string GetStatusLabel(Gizmo.Web.Api.Models.HostStatusModel host)
     {
-        if (host.IsOutOfOrder) return Resources.HOST_STATE_OUT_OF_ORDER;
-        if (host.IsInMaintenance) return Resources.HOST_STATE_MAINTENANCE;
-        if (host.IsLocked)     return Resources.HOST_STATE_LOCKED;
-        return Resources.HOST_STATE_FREE;
+        if (host.IsOutOfOrder) return L[Resources.HOST_STATE_OUT_OF_ORDER];
+        if (host.IsInMaintenance) return L[Resources.HOST_STATE_MAINTENANCE];
+        if (host.IsLocked)     return L[Resources.HOST_STATE_LOCKED];
+        return L[Resources.HOST_STATE_FREE];
     }
 
     private static string FormatTime(double? seconds)

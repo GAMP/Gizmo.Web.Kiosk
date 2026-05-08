@@ -2,7 +2,6 @@ using System.Globalization;
 using Gizmo.UI;
 using Gizmo.UI.View.Services;
 using Gizmo.Web.Api.Clients;
-using Gizmo.Web.Kiosk.ViewStates;
 using Microsoft.Extensions.Logging;
 
 namespace Gizmo.Web.Kiosk.ViewServices
@@ -31,8 +30,6 @@ namespace Gizmo.Web.Kiosk.ViewServices
                     var culture = new CultureInfo(options.DefaultCulture);
                     CultureInfo.DefaultThreadCurrentCulture = culture;
                     CultureInfo.DefaultThreadCurrentUICulture = culture;
-                    Resources.Resources.Culture = culture;
-
                     Logger.LogInformation("Culture set to {culture} from server options.", culture.Name);
                 }
             }
