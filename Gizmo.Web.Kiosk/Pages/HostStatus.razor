@@ -8,11 +8,19 @@
 <div class="dashboard">
     @if (ViewState.IsInitializing == true || ViewState.IsInitialized == null)
     {
-        <div class="status-message">Loading...</div>
+        <div class="skeleton-grid">
+            @for (int i = 0; i < 48; i++)
+            {
+                <div class="skeleton-cell" style="animation-delay: @(i * 0.04)s"></div>
+            }
+        </div>
     }
     else if (ViewState.ErrorMessage is not null)
     {
-        <div class="status-message error">@ViewState.ErrorMessage</div>
+        <div class="status-message error">
+            <div class="status-icon">⚠</div>
+            @ViewState.ErrorMessage
+        </div>
     }
     else if (!ViewState.Hosts.Any())
     {
