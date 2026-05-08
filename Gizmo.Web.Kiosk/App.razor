@@ -1,6 +1,23 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+@using Gizmo.UI
+@inject NavigationManager NavigationManager
+@inject Gizmo.UI.Services.NavigationService NavigationService
+@inject Gizmo.UI.Services.JSRuntimeService JSRuntimeService
+@inject IJSRuntime JSRuntime
+@inject IServiceProvider ServiceProvider
+
+<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        JSRuntimeService.AssociateJSRuntime(JSRuntime);
+        NavigationService.AssociateNavigationManager(NavigationManager);
+
+        await ServiceProvider.InitializeViewsServices();
+    }
+}

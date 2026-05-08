@@ -31,12 +31,4 @@ builder.Services.AddUIServices();
 builder.Services.AddViewStates(assembly);
 builder.Services.AddViewServices(assembly);
 
-var host = builder.Build();
-
-// Associate NavigationManager and JSRuntime, then initialize all view services
-var navService = host.Services.GetRequiredService<Gizmo.UI.Services.NavigationService>();
-var jsService = host.Services.GetRequiredService<Gizmo.UI.Services.JSRuntimeService>();
-
-await host.Services.InitializeViewsServices();
-
-await host.RunAsync();
+await builder.Build().RunAsync();

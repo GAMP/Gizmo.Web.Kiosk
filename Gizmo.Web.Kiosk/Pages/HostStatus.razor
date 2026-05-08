@@ -75,10 +75,11 @@
     private static string CellStyle(int row, int col, int size) =>
         $"left:{col * (size + GapPx) + GapPx}px; top:{row * (size + GapPx) + GapPx}px; width:{size}px; height:{size}px;";
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         ViewState.OnChange += OnViewStateChanged;
         BuildCellMap();
+        return Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
