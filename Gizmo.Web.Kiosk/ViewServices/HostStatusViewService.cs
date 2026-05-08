@@ -44,17 +44,13 @@ namespace Gizmo.Web.Kiosk.ViewServices
 
         protected override async Task OnNavigatedIn(NavigationParameters navigationParameters, CancellationToken cancellationToken = default)
         {
-            await LoadAsync(cancellationToken);
-
-            // Debounce per host: if multiple notifications arrive for the same host
-            // within 300ms, only fetch once.
             _debounceSubscription = _hostChangedSubject
                 .GroupBy(id => id)
                 .SelectMany(g => g.Throttle(TimeSpan.FromMilliseconds(300)))
                 .Subscribe(hostId => _ = RefreshHostAsync(hostId, CancellationToken.None));
 
             _streamCts = new CancellationTokenSource();
-            _ = StreamEventsAsync(_streamCts.Token);
+            _ = LoadWithRetryAsync(_streamCts.Token);
         }
 
         protected override Task OnNavigatedOut(NavigationParameters navigationParameters, CancellationToken cancellationToken = default)
@@ -66,7 +62,36 @@ namespace Gizmo.Web.Kiosk.ViewServices
             return Task.CompletedTask;
         }
 
-        private async Task LoadAsync(CancellationToken cancellationToken)
+        private static readonly TimeSpan[] RetryDelays =
+        [
+            TimeSpan.FromSeconds(3),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(30),
+        ];
+
+        private async Task LoadWithRetryAsync(CancellationToken cancellationToken)
+        {
+            var attempt = 0;
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var success = await LoadAsync(cancellationToken);
+                if (success)
+                {
+                    _ = StreamEventsAsync(cancellationToken);
+                    return;
+                }
+
+                var delay = RetryDelays[Math.Min(attempt, RetryDelays.Length - 1)];
+                attempt++;
+                Logger.LogInformation("Load failed, retrying in {delay}s (attempt {attempt}).", delay.TotalSeconds, attempt);
+
+                try { await Task.Delay(delay, cancellationToken); }
+                catch (OperationCanceledException) { return; }
+            }
+        }
+
+        private async Task<bool> LoadAsync(CancellationToken cancellationToken)
         {
             ViewState.IsInitializing = true;
             ViewState.ErrorMessage = null;
@@ -80,18 +105,23 @@ namespace Gizmo.Web.Kiosk.ViewServices
                 if (hosts.Count == 0)
                 {
                     ViewState.ErrorMessage = "No hosts found. Please check layout configuration.";
+                    return false;
                 }
-                else
-                {
-                    ViewState.Hosts = hosts;
-                    ViewState.MaxRow = hosts.Max(h => h.Row);
-                    ViewState.MaxCol = hosts.Max(h => h.Column);
-                }
+
+                ViewState.Hosts = hosts;
+                ViewState.MaxRow = hosts.Max(h => h.Row);
+                ViewState.MaxCol = hosts.Max(h => h.Column);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Failed to load host statuses.");
-                ViewState.ErrorMessage = "Could not connect to server.";
+                ViewState.ErrorMessage = "Could not connect to server. Retrying...";
+                return false;
             }
             finally
             {
