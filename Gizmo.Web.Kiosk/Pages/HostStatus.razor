@@ -1,57 +1,47 @@
+@page "/"
 @page "/hoststatus"
-@using Gizmo.Web.Kiosk.Services
-@inject HostStatusService HostStatusSvc
+@using Gizmo.Web.Kiosk.ViewStates
+@inject HostStatusViewState ViewState
 @inject IJSRuntime JS
-@implements IAsyncDisposable
+@implements IDisposable
 
 <div class="dashboard">
-    @if (_loading)
+    @if (ViewState.IsInitializing == true || ViewState.IsInitialized == null)
     {
         <div class="status-message">Loading...</div>
     }
-    else if (HostStatusSvc.ErrorMessage is not null)
+    else if (ViewState.ErrorMessage is not null)
     {
-        <div class="status-message error">@HostStatusSvc.ErrorMessage</div>
+        <div class="status-message error">@ViewState.ErrorMessage</div>
     }
-    else if (!HostStatusSvc.Hosts.Any())
+    else if (!ViewState.Hosts.Any())
     {
         <div class="status-message">No hosts found.</div>
     }
-    else if (HasLayout)
+    else
     {
         var cellSize = CellSize;
-
         <div class="hosts-map" style="width:100%; height:100%;">
             @for (int r = 0; r < GridRows; r++)
             {
                 @for (int c = 0; c < GridCols; c++)
                 {
                     var row = r; var col = c;
-                    if (!_hostsByCell.TryGetValue((row, col), out var cellHost))
+                    var host = _hostsByCell.GetValueOrDefault((row, col));
+                    if (host is null)
                     {
                         <div class="host-cell host-cell--placeholder"
                              style="@CellStyle(row, col, cellSize)" />
                     }
                     else
                     {
-                        <div class="host-cell @GetCellClass(cellHost)"
+                        <div class="host-cell @GetCellClass(host)"
                              style="@CellStyle(row, col, cellSize)"
-                             title="@cellHost.Name">
-                            @RenderCard(cellHost, cellSize)
+                             title="@host.Name">
+                            @RenderCard(host, cellSize)
                         </div>
                     }
                 }
-            }
-        </div>
-    }
-    else
-    {
-        <div class="hosts-grid">
-            @foreach (var host in HostStatusSvc.Hosts.Values.OrderBy(h => h.Number))
-            {
-                <div class="host-cell @GetCellClass(host)" title="@host.Name">
-                    @RenderCard(host, 82)
-                </div>
             }
         </div>
     }
@@ -62,15 +52,12 @@
     private const int MinCellPx = 60;
     private const int MaxCellPx = 72;
 
-    private bool _loading = true;
     private int _vpWidth = 1280;
     private int _vpHeight = 800;
-    private CancellationTokenSource _cts = new();
-    private Dictionary<(int, int), HostEntry> _hostsByCell = [];
+    private Dictionary<(int, int), Gizmo.Web.Api.Models.HostStatusModel> _hostsByCell = [];
 
-    private bool HasLayout => HostStatusSvc.Hosts.Values.Any(h => h.Row.HasValue);
-    private int MaxRow => HostStatusSvc.Hosts.Values.Max(h => h.Row ?? 0);
-    private int MaxCol => HostStatusSvc.Hosts.Values.Max(h => h.Column ?? 0);
+    private int MaxRow => ViewState.MaxRow;
+    private int MaxCol => ViewState.MaxCol;
     private int GridCols => Math.Max(MaxCol + 1, (_vpWidth - GapPx) / Math.Max(CellSize + GapPx, 1));
     private int GridRows => Math.Max(MaxRow + 1, (_vpHeight - GapPx) / Math.Max(CellSize + GapPx, 1));
 
@@ -78,7 +65,7 @@
     {
         get
         {
-            if (!HasLayout) return 82;
+            if (!ViewState.Hosts.Any()) return 82;
             var byWidth  = (_vpWidth  - GapPx) / (MaxCol + 1) - GapPx;
             var byHeight = (_vpHeight - GapPx) / (MaxRow + 1) - GapPx;
             return Math.Clamp(Math.Min(byWidth, byHeight), MinCellPx, MaxCellPx);
@@ -90,9 +77,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        HostStatusSvc.Changed += OnChanged;
-        await HostStatusSvc.InitializeAsync(_cts.Token);
-        _loading = false;
+        ViewState.OnChange += OnViewStateChanged;
         BuildCellMap();
     }
 
@@ -109,18 +94,17 @@
 
     private void BuildCellMap()
     {
-        _hostsByCell = HostStatusSvc.Hosts.Values
-            .Where(h => h.Row.HasValue && h.Column.HasValue)
-            .ToDictionary(h => (h.Row!.Value, h.Column!.Value));
+        _hostsByCell = ViewState.Hosts
+            .ToDictionary(h => (h.Row, h.Column));
     }
 
-    private void OnChanged(object? sender, EventArgs e)
+    private void OnViewStateChanged(object? sender, EventArgs e)
     {
         BuildCellMap();
         InvokeAsync(StateHasChanged);
     }
 
-    private RenderFragment RenderCard(HostEntry host, int size) => __builder =>
+    private RenderFragment RenderCard(Gizmo.Web.Api.Models.HostStatusModel host, int size) => __builder =>
     {
         var small = size < 60;
         <div class="host-cell__number" style="font-size:@(size * 0.28)px">@host.Number</div>
@@ -128,9 +112,10 @@
         {
             <div class="host-cell__name">@host.Name</div>
         }
-        @if (host.IsOccupied)
+        @if (host.Sessions.Any())
         {
-            <div class="host-cell__time">@FormatTime(host.CreditedTime)</div>
+            var session = host.Sessions.First();
+            <div class="host-cell__time">@FormatTime(session.CreditedTime)</div>
         }
         else if (!small)
         {
@@ -138,17 +123,18 @@
         }
     };
 
-    private static string GetCellClass(HostEntry host)
+    private static string GetCellClass(Gizmo.Web.Api.Models.HostStatusModel host)
     {
-        if (host.IsOutOfOrder) return "host-cell--out-of-order";
+        if (host.IsOutOfOrder || host.IsInMaintenance) return "host-cell--out-of-order";
         if (host.IsLocked)     return "host-cell--locked";
-        if (host.IsOccupied)   return "host-cell--occupied";
+        if (host.Sessions.Any()) return "host-cell--occupied";
         return "host-cell--free";
     }
 
-    private static string GetStatusLabel(HostEntry host)
+    private static string GetStatusLabel(Gizmo.Web.Api.Models.HostStatusModel host)
     {
         if (host.IsOutOfOrder) return "Out of order";
+        if (host.IsInMaintenance) return "Maintenance";
         if (host.IsLocked)     return "Locked";
         return "Free";
     }
@@ -162,10 +148,8 @@
             : $"{ts.Minutes}:{ts.Seconds:D2}";
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        HostStatusSvc.Changed -= OnChanged;
-        await _cts.CancelAsync();
-        _cts.Dispose();
+        ViewState.OnChange -= OnViewStateChanged;
     }
 }
