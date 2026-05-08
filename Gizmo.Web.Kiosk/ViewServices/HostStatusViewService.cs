@@ -1,13 +1,10 @@
-using System.Net.Http.Json;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text.Json;
 using Gizmo.UI;
 using Gizmo.UI.View.Services;
 using Gizmo.Web.Api.Clients;
 using Gizmo.Web.Api.Models;
 using Gizmo.Web.Kiosk.Configuration;
-using Gizmo.Web.Kiosk.Resources;
 using Gizmo.Web.Kiosk.ViewStates;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
@@ -26,22 +23,16 @@ namespace Gizmo.Web.Kiosk.ViewServices
             ILogger<HostStatusViewService> logger,
             IServiceProvider serviceProvider,
             HostsWebApiClient hostsClient,
-            IHttpClientFactory httpClientFactory,
             IOptions<KioskOptions> options,
-            NavigationManager navigationManager,
             IStringLocalizer<Gizmo.Web.Kiosk.Resources.Resources> localizer) : base(viewState, logger, serviceProvider)
         {
             _hostsClient = hostsClient;
-            _httpClientFactory = httpClientFactory;
             _options = options.Value;
-            _navigationManager = navigationManager;
             _localizer = localizer;
         }
 
         private readonly HostsWebApiClient _hostsClient;
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly KioskOptions _options;
-        private readonly NavigationManager _navigationManager;
         private readonly IStringLocalizer<Gizmo.Web.Kiosk.Resources.Resources> _localizer;
         private CancellationTokenSource? _streamCts;
         private readonly Subject<int> _hostChangedSubject = new();
@@ -116,6 +107,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
                 ViewState.Hosts = hosts;
                 ViewState.MaxRow = hosts.Max(h => h.Row);
                 ViewState.MaxCol = hosts.Max(h => h.Column);
+                ViewState.ResolvedLayoutId = hosts.First().LayoutGroupId;
                 return true;
             }
             catch (OperationCanceledException)
@@ -138,44 +130,14 @@ namespace Gizmo.Web.Kiosk.ViewServices
 
         private async Task StreamEventsAsync(CancellationToken cancellationToken)
         {
-            var baseUrl = string.IsNullOrWhiteSpace(_options.ServerUrl)
-                ? _navigationManager.BaseUri.TrimEnd('/')
-                : _options.ServerUrl.TrimEnd('/');
-
-            var streamUrl = $"{baseUrl}/api/v3/hosts/status/stream";
-
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    using var client = _httpClientFactory.CreateClient();
-                    using var response = await client.GetAsync(streamUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                    response.EnsureSuccessStatusCode();
-
-                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                    using var reader = new StreamReader(stream);
-
-                    string? line;
-                    while (!cancellationToken.IsCancellationRequested &&
-                           (line = await reader.ReadLineAsync(cancellationToken)) is not null)
+                    await foreach (var notification in _hostsClient.StreamStatusAsync(cancellationToken))
                     {
-                        if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data:"))
-                            continue;
-
-                        var json = line["data:".Length..].Trim();
-
-                        try
-                        {
-                            var notification = JsonSerializer.Deserialize<HostStatusChangedDto>(json,
-                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                            if (notification?.HostId > 0)
+                        if (notification.HostId > 0)
                             _hostChangedSubject.OnNext(notification.HostId);
-                        }
-                        catch (JsonException ex)
-                        {
-                            Logger.LogWarning(ex, "Failed to parse SSE event: {json}", json);
-                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -194,36 +156,15 @@ namespace Gizmo.Web.Kiosk.ViewServices
         {
             try
             {
-                var updated = await _hostsClient.GetStatusByIdAsync(hostId, cancellationToken);
+                var updated = await _hostsClient.GetStatusByIdAsync(hostId, ViewState.ResolvedLayoutId, cancellationToken);
 
                 var hosts = ViewState.Hosts.ToList();
                 var idx = hosts.FindIndex(h => h.HostId == hostId);
 
                 if (idx >= 0)
-                {
-                    // Preserve layout position from the existing entry — GetStatusByIdAsync
-                    // has no layout context so it returns Row=0, Column=0.
-                    var existing = hosts[idx];
-                    hosts[idx] = new HostStatusModel
-                    {
-                        HostId = updated.HostId,
-                        Number = updated.Number,
-                        Name = updated.Name,
-                        HostGroupId = updated.HostGroupId,
-                        HostGroupName = updated.HostGroupName,
-                        Row = existing.Row,
-                        Column = existing.Column,
-                        IsLocked = updated.IsLocked,
-                        IsOutOfOrder = updated.IsOutOfOrder,
-                        IsInMaintenance = updated.IsInMaintenance,
-                        IsConnected = updated.IsConnected,
-                        Sessions = updated.Sessions,
-                    };
-                }
+                    hosts[idx] = updated;
                 else
-                {
                     hosts.Add(updated);
-                }
 
                 ViewState.Hosts = hosts;
                 RaiseViewStateChanged();
@@ -243,9 +184,5 @@ namespace Gizmo.Web.Kiosk.ViewServices
             base.OnDisposing(isDisposing);
         }
 
-        private sealed class HostStatusChangedDto
-        {
-            public int HostId { get; init; }
-        }
     }
 }

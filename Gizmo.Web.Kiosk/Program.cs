@@ -5,7 +5,6 @@ using Gizmo.Web.Kiosk.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 
@@ -16,18 +15,14 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.Configure<KioskOptions>(builder.Configuration.GetSection("Kiosk"));
 
 builder.Services.AddTransient<ApiKeyMessageHandler>();
-builder.Services.AddHttpClient();
 
 static void httpClientConfig(IServiceProvider sp, HttpClient client)
 {
     var options = sp.GetRequiredService<IOptions<KioskOptions>>().Value;
-    var logger = sp.GetRequiredService<ILogger<KioskOptions>>();
 
     var baseUrl = string.IsNullOrWhiteSpace(options.ServerUrl)
         ? sp.GetRequiredService<NavigationManager>().BaseUri
         : options.ServerUrl.TrimEnd('/') + "/";
-
-    logger.LogInformation("Kiosk base url: {baseUrl}", baseUrl);
 
     client.BaseAddress = new Uri(baseUrl);
 }

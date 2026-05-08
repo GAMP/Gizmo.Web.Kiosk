@@ -6,19 +6,22 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+
+    <!-- TODO: AOT + trimming requires MessagePack source-generated formatters to avoid reflection issues -->
+    <BlazorEnableCompression>true</BlazorEnableCompression>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Gizmo.UI" Version="1.0.1" />
-    <PackageReference Include="Gizmo.Web.Api.Client" Version="1.0.13" />
+    <PackageReference Include="Gizmo.Web.Api.Client" Version="1.0.16" />
+    <PackageReference Include="Gizmo.Web.Api.Models" Version="1.0.16" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.7" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.7" />
   </ItemGroup>
 
   <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
     <Folder Include="Resources\" />
   </ItemGroup>
 

@@ -14,4 +14,18 @@
   <data name="ERROR_NO_HOSTS" xml:space="preserve"><value>No hosts found. Please check layout configuration.</value></data>
   <data name="ERROR_CONNECTION" xml:space="preserve"><value>Could not connect to server. Retrying...</value></data>
   <data name="ERROR_NO_HOSTS_FOUND" xml:space="preserve"><value>No hosts found.</value></data>
+
+  <data name="USER_GUEST" xml:space="preserve"><value>Guest</value></data>
+
+  <data name="TOOLTIP_ONLINE" xml:space="preserve"><value>● Online</value></data>
+  <data name="TOOLTIP_OFFLINE" xml:space="preserve"><value>● Offline</value></data>
+  <data name="TOOLTIP_LOCKED" xml:space="preserve"><value>Locked</value></data>
+  <data name="TOOLTIP_OUT_OF_ORDER" xml:space="preserve"><value>Out of order</value></data>
+  <data name="TOOLTIP_MAINTENANCE" xml:space="preserve"><value>Maintenance</value></data>
+  <data name="TOOLTIP_NO_SESSIONS" xml:space="preserve"><value>No active sessions</value></data>
+  <data name="TOOLTIP_LEFT" xml:space="preserve"><value>left</value></data>
+  <data name="SESSION_STATE_ACTIVE" xml:space="preserve"><value>Active</value></data>
+  <data name="SESSION_STATE_PAUSED" xml:space="preserve"><value>Paused</value></data>
+  <data name="SESSION_STATE_PENDING" xml:space="preserve"><value>Pending</value></data>
+  <data name="SESSION_STATE_GRACE" xml:space="preserve"><value>Grace</value></data>
 </root>

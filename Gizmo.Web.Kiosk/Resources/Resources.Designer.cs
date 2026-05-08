@@ -131,5 +131,53 @@ namespace Gizmo.Web.Kiosk.Resources {
                 return ResourceManager.GetString("HOST_STATE_OUT_OF_ORDER", resourceCulture);
             }
         }
+
+        public static string USER_GUEST {
+            get { return ResourceManager.GetString("USER_GUEST", resourceCulture); }
+        }
+
+        public static string TOOLTIP_ONLINE {
+            get { return ResourceManager.GetString("TOOLTIP_ONLINE", resourceCulture); }
+        }
+
+        public static string TOOLTIP_OFFLINE {
+            get { return ResourceManager.GetString("TOOLTIP_OFFLINE", resourceCulture); }
+        }
+
+        public static string TOOLTIP_LOCKED {
+            get { return ResourceManager.GetString("TOOLTIP_LOCKED", resourceCulture); }
+        }
+
+        public static string TOOLTIP_OUT_OF_ORDER {
+            get { return ResourceManager.GetString("TOOLTIP_OUT_OF_ORDER", resourceCulture); }
+        }
+
+        public static string TOOLTIP_MAINTENANCE {
+            get { return ResourceManager.GetString("TOOLTIP_MAINTENANCE", resourceCulture); }
+        }
+
+        public static string TOOLTIP_NO_SESSIONS {
+            get { return ResourceManager.GetString("TOOLTIP_NO_SESSIONS", resourceCulture); }
+        }
+
+        public static string TOOLTIP_LEFT {
+            get { return ResourceManager.GetString("TOOLTIP_LEFT", resourceCulture); }
+        }
+
+        public static string SESSION_STATE_ACTIVE {
+            get { return ResourceManager.GetString("SESSION_STATE_ACTIVE", resourceCulture); }
+        }
+
+        public static string SESSION_STATE_PAUSED {
+            get { return ResourceManager.GetString("SESSION_STATE_PAUSED", resourceCulture); }
+        }
+
+        public static string SESSION_STATE_PENDING {
+            get { return ResourceManager.GetString("SESSION_STATE_PENDING", resourceCulture); }
+        }
+
+        public static string SESSION_STATE_GRACE {
+            get { return ResourceManager.GetString("SESSION_STATE_GRACE", resourceCulture); }
+        }
     }
 }

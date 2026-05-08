@@ -11,5 +11,7 @@ namespace Gizmo.Web.Kiosk.ViewStates
         public int MaxRow { get; set; }
         public int MaxCol { get; set; }
         public string? ErrorMessage { get; set; }
+        public int? SelectedHostId { get; set; }
+        public int? ResolvedLayoutId { get; set; }
     }
 }
