@@ -194,38 +194,3 @@ html, body {
     opacity: 0.6;
 }
 
-.loading-progress {
-    position: absolute;
-    display: block;
-    width: 6rem;
-    height: 6rem;
-    inset: 20vh 0 auto 0;
-    margin: 0 auto;
-}
-
-.loading-progress circle {
-    fill: none;
-    stroke: #222;
-    stroke-width: 0.6rem;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-}
-
-.loading-progress circle:last-child {
-    stroke: #3a5a90;
-    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-    transition: stroke-dasharray 0.05s ease-in-out;
-}
-
-.loading-progress-text {
-    position: absolute;
-    text-align: center;
-    font-weight: bold;
-    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
-    font-size: 0.75rem;
-    color: #555;
-}
-
-.loading-progress-text:after {
-    content: var(--blazor-load-percentage-text, "Loading");
-}

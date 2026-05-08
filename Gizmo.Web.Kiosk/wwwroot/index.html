@@ -7,20 +7,83 @@
     <title>Gizmo.Web.Kiosk</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Gizmo.Web.Kiosk.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
+    <style>
+        #app-loading {
+            position: fixed;
+            inset: 0;
+            background: #0d0f1c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+        }
+
+        .app-loading__logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(200, 220, 255, 0.35);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .app-loading__bar {
+            width: 180px;
+            height: 2px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .app-loading__bar-fill {
+            height: 100%;
+            width: var(--blazor-load-percentage, 0%);
+            background: linear-gradient(90deg, #2a5298, #5b8dee);
+            border-radius: 2px;
+            transition: width 0.15s ease;
+        }
+
+        .app-loading__dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .app-loading__dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(200, 220, 255, 0.25);
+            animation: dot-pulse 1.4s ease-in-out infinite;
+        }
+
+        .app-loading__dot:nth-child(2) { animation-delay: 0.2s; }
+        .app-loading__dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dot-pulse {
+            0%, 80%, 100% { transform: scale(1);   opacity: 0.25; }
+            40%            { transform: scale(1.5); opacity: 0.9;  }
+        }
+    </style>
 </head>
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div id="app-loading">
+            <div class="app-loading__logo">Gizmo</div>
+            <div class="app-loading__bar">
+                <div class="app-loading__bar-fill"></div>
+            </div>
+            <div class="app-loading__dots">
+                <div class="app-loading__dot"></div>
+                <div class="app-loading__dot"></div>
+                <div class="app-loading__dot"></div>
+            </div>
+        </div>
     </div>
 
     <div id="blazor-error-ui">
