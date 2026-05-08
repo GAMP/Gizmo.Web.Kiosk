@@ -16,8 +16,11 @@
     protected override async Task OnInitializedAsync()
     {
         JSRuntimeService.AssociateJSRuntime(JSRuntime);
-        NavigationService.AssociateNavigationManager(NavigationManager);
 
+        // Initialize first so view services subscribe to LocationChanged,
+        // then associate — which fires the initial LocationChanged event.
         await ServiceProvider.InitializeViewsServices();
+
+        NavigationService.AssociateNavigationManager(NavigationManager);
     }
 }
