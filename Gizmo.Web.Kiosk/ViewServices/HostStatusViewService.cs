@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text.Json;
 using Gizmo.UI;
 using Gizmo.UI.View.Services;
@@ -37,12 +39,20 @@ namespace Gizmo.Web.Kiosk.ViewServices
         private readonly KioskOptions _options;
         private readonly NavigationManager _navigationManager;
         private CancellationTokenSource? _streamCts;
+        private readonly Subject<int> _hostChangedSubject = new();
+        private IDisposable? _debounceSubscription;
 
         protected override async Task OnNavigatedIn(NavigationParameters navigationParameters, CancellationToken cancellationToken = default)
         {
             await LoadAsync(cancellationToken);
 
-            // Start SSE stream after initial load
+            // Debounce per host: if multiple notifications arrive for the same host
+            // within 300ms, only fetch once.
+            _debounceSubscription = _hostChangedSubject
+                .GroupBy(id => id)
+                .SelectMany(g => g.Throttle(TimeSpan.FromMilliseconds(300)))
+                .Subscribe(hostId => _ = RefreshHostAsync(hostId, CancellationToken.None));
+
             _streamCts = new CancellationTokenSource();
             _ = StreamEventsAsync(_streamCts.Token);
         }
@@ -51,6 +61,8 @@ namespace Gizmo.Web.Kiosk.ViewServices
         {
             _streamCts?.Cancel();
             _streamCts = null;
+            _debounceSubscription?.Dispose();
+            _debounceSubscription = null;
             return Task.CompletedTask;
         }
 
@@ -123,7 +135,7 @@ namespace Gizmo.Web.Kiosk.ViewServices
                                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                             if (notification?.HostId > 0)
-                                await RefreshHostAsync(notification.HostId, cancellationToken);
+                            _hostChangedSubject.OnNext(notification.HostId);
                         }
                         catch (JsonException ex)
                         {
@@ -170,6 +182,8 @@ namespace Gizmo.Web.Kiosk.ViewServices
         {
             _streamCts?.Cancel();
             _streamCts = null;
+            _debounceSubscription?.Dispose();
+            _hostChangedSubject.OnCompleted();
             base.OnDisposing(isDisposing);
         }
 
